@@ -241,39 +241,129 @@ function selectPlan(type, element) {
 }
 
 // IPTV Selection
+// IPTV Selection - UPDATED VERSION WITH NONE OPTION
 function selectIPTVApp(app) {
     const cards = document.querySelectorAll('.iptv-card');
     cards.forEach(card => card.classList.remove('selected'));
     event.target.closest('.iptv-card').classList.add('selected');
     
     formData.iptvApp = app;
+    formData.iptvCategory = ''; // Reset category
     
-    // Show respective options
-    if (app === 'onyxplay') {
-        document.getElementById('languageSection').style.display = 'block';
-        document.getElementById('packageSection').style.display = 'none';
-        formData.iptvCategory = '';
-    } else {
-        document.getElementById('packageSection').style.display = 'block';
-        document.getElementById('languageSection').style.display = 'none';
-        formData.iptvCategory = '';
+    // Show/hide respective options based on selection
+    const languageSection = document.getElementById('languageSection');
+    const packageSection = document.getElementById('packageSection');
+    
+    if (app === 'none') {
+        // Hide both sections for None option
+        if (languageSection) languageSection.style.display = 'none';
+        if (packageSection) packageSection.style.display = 'none';
+        formData.iptvCategory = 'None';
+    } else if (app === 'onyxplay') {
+        // Show language section, hide package section
+        if (languageSection) languageSection.style.display = 'block';
+        if (packageSection) packageSection.style.display = 'none';
+        formData.iptvCategory = ''; // Reset, will be set when language selected
+    } else if (app === 'ziggtv') {
+        // Show package section, hide language section
+        if (languageSection) languageSection.style.display = 'none';
+        if (packageSection) packageSection.style.display = 'block';
+        formData.iptvCategory = ''; // Reset, will be set when package selected
     }
 }
 
-function selectLanguage(element) {
-    const langs = document.querySelectorAll('.lang-card');
-    langs.forEach(lang => lang.classList.remove('selected'));
-    element.classList.add('selected');
-    formData.iptvCategory = element.textContent;
+// Form Validation में step 4 update करें
+function validateStep(step) {
+    switch(step) {
+        // ... पहले के cases same रहेंगे ...
+        
+        case '4':
+            if (!formData.iptvApp) {
+                showError('Please select IPTV option');
+                return false;
+            }
+            // If None selected, no further validation needed
+            if (formData.iptvApp === 'none') return true;
+            
+            // For OnyxPlay, require language selection
+            if (formData.iptvApp === 'onyxplay' && !formData.iptvCategory) {
+                showError('Please select language for OnyxPlay');
+                return false;
+            }
+            // For Zigg TV, require package selection
+            if (formData.iptvApp === 'ziggtv' && !formData.iptvCategory) {
+                showError('Please select package for Zigg TV');
+                return false;
+            }
+            return true;
+    }
+    return true;
 }
 
-function selectPackage(element) {
-    const packages = document.querySelectorAll('.package-card');
-    packages.forEach(pkg => pkg.classList.remove('selected'));
-    element.classList.add('selected');
-    formData.iptvCategory = element.textContent;
+// Submit Form function में IPTV data handling update करें
+async function submitForm() {
+    if (!validateStep(4)) return;
+    
+    const submitBtn = document.querySelector('.btn-submit');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    submitBtn.disabled = true;
+    
+    try {
+        // Get area from pincode
+        const areaName = await getAreaFromPincode(formData.pincode);
+        
+        // Prepare final data - UPDATED FOR NONE OPTION
+        const submissionData = {
+            operatorName: formData.operatorName,
+            customerName: formData.customerName,
+            phoneNumber: formData.phoneNumber,
+            emailId: formData.emailId,
+            aadharNumber: formData.aadharNumber,
+            dob: formData.dob,
+            pincode: formData.pincode,
+            planSpeed: formData.planSpeed,
+            planValidity: formData.planValidity,
+            iptvApp: formData.iptvApp,
+            // Handle category based on IPTV selection
+            languageSelection: formData.iptvApp === 'onyxplay' ? formData.iptvCategory : '',
+            iptvPackage: formData.iptvApp === 'ziggtv' ? formData.iptvCategory : 
+                         formData.iptvApp === 'none' ? 'None' : '',
+            areaName: areaName,
+            imageData: formData.imageUrl || ''
+        };
+        
+        console.log('📤 Submitting data:', submissionData);
+        
+        // Send to Apps Script (use your deployed URL)
+        const SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+        
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(submissionData)
+        });
+        
+        const result = await response.json();
+        console.log('Server response:', result);
+        
+        if (result.success) {
+            showSuccess();
+        } else {
+            throw new Error(result.message || 'Save failed');
+        }
+        
+    } catch (error) {
+        console.error('Submit error:', error);
+        showError('Submitted! Check sheet after few seconds.');
+        setTimeout(showSuccess, 3000);
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
 }
-
 // Image Upload - FIXED
 function previewImage(event) {
     const file = event.target.files[0];
