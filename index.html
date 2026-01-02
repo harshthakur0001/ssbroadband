@@ -207,55 +207,63 @@
             </form>
 
             <!-- Step 4: IPTV Selection -->
-            <form class="form-step" id="step4">
-                <h2 class="form-title"><i class="fas fa-tv"></i> IPTV Service</h2>
-                
-                <div class="iptv-section">
-                    <h3><i class="fas fa-play-circle"></i> Select IPTV App</h3>
-                    <div class="iptv-options">
-                        <div class="iptv-card" data-app="onyxplay" onclick="selectIPTVApp('onyxplay')">
-                            <div class="iptv-icon"><i class="fas fa-play"></i></div>
-                            <h4>OnyxPlay</h4>
-                        </div>
-                        <div class="iptv-card" data-app="ziggtv" onclick="selectIPTVApp('ziggtv')">
-                            <div class="iptv-icon"><i class="fas fa-tv"></i></div>
-                            <h4>Zigg TV</h4>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="iptv-section" id="languageSection" style="display: none;">
-                    <h3><i class="fas fa-language"></i> Select Language (OnyxPlay)</h3>
-                    <div class="language-grid" id="languageOptions">
-                        <div class="lang-card" onclick="selectLanguage(this)">Hindi</div>
-                        <div class="lang-card" onclick="selectLanguage(this)">Marathi</div>
-                        <div class="lang-card" onclick="selectLanguage(this)">Bengali</div>
-                        <div class="lang-card" onclick="selectLanguage(this)">Gujarati</div>
-                        <div class="lang-card" onclick="selectLanguage(this)">Tamil</div>
-                    </div>
-                </div>
-
-                <div class="iptv-section" id="packageSection" style="display: none;">
-                    <h3><i class="fas fa-box"></i> Select Package (Zigg TV)</h3>
-                    <div class="package-grid" id="packageOptions">
-                        <div class="package-card" onclick="selectPackage(this)">Starter Plus</div>
-                        <div class="package-card" onclick="selectPackage(this)">Starter</div>
-                        <div class="package-card" onclick="selectPackage(this)">Silver HD</div>
-                        <div class="package-card" onclick="selectPackage(this)">Bronze HD</div>
-                        <div class="package-card" onclick="selectPackage(this)">Damaka Pack</div>
-                    </div>
-                </div>
-
-                <div class="button-group">
-                    <button type="button" class="btn-prev" onclick="prevStep(3)">
-                        <i class="fas fa-arrow-left"></i> Previous
-                    </button>
-                    <button type="button" class="btn-submit" onclick="submitForm()">
-                        <i class="fas fa-paper-plane"></i> Submit
-                    </button>
-                </div>
-            </form>
+            <!-- Step 4: IPTV Selection Section में यह change करें -->
+<form class="form-step" id="step4">
+    <h2 class="form-title"><i class="fas fa-tv"></i> IPTV Service</h2>
+    
+    <div class="iptv-section">
+        <h3><i class="fas fa-play-circle"></i> Select IPTV App</h3>
+        <div class="iptv-options">
+            <!-- None Option -->
+            <div class="iptv-card" data-app="none" onclick="selectIPTVApp('none')">
+                <div class="iptv-icon"><i class="fas fa-times-circle"></i></div>
+                <h4>None</h4>
+                <p>No IPTV Required</p>
+            </div>
+            
+            <div class="iptv-card" data-app="onyxplay" onclick="selectIPTVApp('onyxplay')">
+                <div class="iptv-icon"><i class="fas fa-play"></i></div>
+                <h4>OnyxPlay</h4>
+            </div>
+            
+            <div class="iptv-card" data-app="ziggtv" onclick="selectIPTVApp('ziggtv')">
+                <div class="iptv-icon"><i class="fas fa-tv"></i></div>
+                <h4>Zigg TV</h4>
+            </div>
         </div>
+    </div>
+
+    <div class="iptv-section" id="languageSection" style="display: none;">
+        <h3><i class="fas fa-language"></i> Select Language (OnyxPlay)</h3>
+        <div class="language-grid" id="languageOptions">
+            <div class="lang-card" onclick="selectLanguage(this)">Hindi</div>
+            <div class="lang-card" onclick="selectLanguage(this)">Marathi</div>
+            <div class="lang-card" onclick="selectLanguage(this)">Bengali</div>
+            <div class="lang-card" onclick="selectLanguage(this)">Gujarati</div>
+            <div class="lang-card" onclick="selectLanguage(this)">Tamil</div>
+        </div>
+    </div>
+
+    <div class="iptv-section" id="packageSection" style="display: none;">
+        <h3><i class="fas fa-box"></i> Select Package (Zigg TV)</h3>
+        <div class="package-grid" id="packageOptions">
+            <div class="package-card" onclick="selectPackage(this)">Starter Plus</div>
+            <div class="package-card" onclick="selectPackage(this)">Starter</div>
+            <div class="package-card" onclick="selectPackage(this)">Silver HD</div>
+            <div class="package-card" onclick="selectPackage(this)">Bronze HD</div>
+            <div class="package-card" onclick="selectPackage(this)">Damaka Pack</div>
+        </div>
+    </div>
+
+    <div class="button-group">
+        <button type="button" class="btn-prev" onclick="prevStep(3)">
+            <i class="fas fa-arrow-left"></i> Previous
+        </button>
+        <button type="button" class="btn-submit" onclick="submitForm()">
+            <i class="fas fa-paper-plane"></i> Submit
+        </button>
+    </div>
+</form>
 
         <!-- Success Message -->
         <div class="success-message" id="successMessage">
