@@ -206,20 +206,27 @@
                 </div>
             </form>
 
-            <!-- Step 4: IPTV Selection -->
+            <!-- Step 4: IPTV Selection - UPDATED WITH NONE BUTTON -->
             <form class="form-step" id="step4">
                 <h2 class="form-title"><i class="fas fa-tv"></i> IPTV Service</h2>
                 
                 <div class="iptv-section">
                     <h3><i class="fas fa-play-circle"></i> Select IPTV App</h3>
                     <div class="iptv-options">
+                        <div class="iptv-card" data-app="none" onclick="selectIPTVApp('none')">
+                            <div class="iptv-icon"><i class="fas fa-times-circle"></i></div>
+                            <h4>None</h4>
+                            <p>No IPTV Required</p>
+                        </div>
                         <div class="iptv-card" data-app="onyxplay" onclick="selectIPTVApp('onyxplay')">
                             <div class="iptv-icon"><i class="fas fa-play"></i></div>
                             <h4>OnyxPlay</h4>
+                            <p>Live TV & Movies</p>
                         </div>
                         <div class="iptv-card" data-app="ziggtv" onclick="selectIPTVApp('ziggtv')">
                             <div class="iptv-icon"><i class="fas fa-tv"></i></div>
                             <h4>Zigg TV</h4>
+                            <p>Entertainment</p>
                         </div>
                     </div>
                 </div>
