@@ -12,7 +12,8 @@ let formData = {
     planValidity: '',
     iptvApp: '',
     iptvCategory: '',
-    imageUrl: ''
+    imageUrl: '',
+    areaName: ''
 };
 
 // Initialize
@@ -49,7 +50,6 @@ function nextStep(next) {
     
     // Validate current step
     if (!validateStep(currentStep.id.replace('step', ''))) {
-        showError('Please fill all required fields');
         return;
     }
     
@@ -205,7 +205,7 @@ function validateStep(step) {
             
         case '4':
             if (!formData.iptvApp) {
-                showError('Please select IPTV app');
+                showError('Please select IPTV app or choose "None"');
                 return false;
             }
             if (formData.iptvApp === 'onyxplay' && !formData.iptvCategory) {
@@ -215,6 +215,10 @@ function validateStep(step) {
             if (formData.iptvApp === 'ziggtv' && !formData.iptvCategory) {
                 showError('Please select package');
                 return false;
+            }
+            // Agar "none" select kiya hai to category empty rahegi
+            if (formData.iptvApp === 'none') {
+                formData.iptvCategory = '';
             }
             return true;
     }
@@ -230,7 +234,8 @@ function selectPlan(type, element) {
     if (type === 'speed') {
         formData.planSpeed = element.dataset.value + ' Mbps';
     } else {
-        formData.planValidity = element.dataset.value + ' Month' + (element.dataset.value > 1 ? 's' : '');
+        const months = parseInt(element.dataset.value);
+        formData.planValidity = months + ' Month' + (months > 1 ? 's' : '');
     }
     
     // Add animation
@@ -240,7 +245,7 @@ function selectPlan(type, element) {
     }, 300);
 }
 
-// IPTV Selection
+// IPTV Selection - UPDATED WITH NONE OPTION
 function selectIPTVApp(app) {
     const cards = document.querySelectorAll('.iptv-card');
     cards.forEach(card => card.classList.remove('selected'));
@@ -249,11 +254,15 @@ function selectIPTVApp(app) {
     formData.iptvApp = app;
     
     // Show respective options
-    if (app === 'onyxplay') {
+    if (app === 'none') {
+        document.getElementById('languageSection').style.display = 'none';
+        document.getElementById('packageSection').style.display = 'none';
+        formData.iptvCategory = '';
+    } else if (app === 'onyxplay') {
         document.getElementById('languageSection').style.display = 'block';
         document.getElementById('packageSection').style.display = 'none';
         formData.iptvCategory = '';
-    } else {
+    } else if (app === 'ziggtv') {
         document.getElementById('packageSection').style.display = 'block';
         document.getElementById('languageSection').style.display = 'none';
         formData.iptvCategory = '';
@@ -310,7 +319,7 @@ function previewImage(event) {
     reader.readAsDataURL(file);
 }
 
-// Submit Form
+// Submit Form - UPDATED WITH FIXED APP SCRIPT URL
 async function submitForm() {
     // Validate all steps
     if (!validateStep(4)) return;
@@ -326,8 +335,9 @@ async function submitForm() {
     try {
         // Get area name from pincode
         const areaName = await getAreaFromPincode(formData.pincode);
+        formData.areaName = areaName;
         
-        // Prepare data for submission
+        // Prepare data for submission - FIXED FOR TELEGRAM AND SHEETS
         const submissionData = {
             timestamp: new Date().toISOString(),
             operatorName: formData.operatorName,
@@ -335,21 +345,26 @@ async function submitForm() {
             phoneNumber: formData.phoneNumber,
             emailId: formData.emailId,
             aadharNumber: formData.aadharNumber,
+            dob: formData.dob,
+            pincode: formData.pincode,
             planSpeed: formData.planSpeed,
             planValidity: formData.planValidity,
             iptvApp: formData.iptvApp,
-            areaName: areaName,
-            dob: formData.dob,
-            languageSelection: formData.iptvApp === 'onyxplay' ? formData.iptvCategory : '',
             iptvPackage: formData.iptvApp === 'ziggtv' ? formData.iptvCategory : '',
+            languageSelection: formData.iptvApp === 'onyxplay' ? formData.iptvCategory : '',
+            areaName: areaName,
             imageData: formData.imageUrl || ''
         };
         
-        // IMPORTANT: Replace with your Apps Script URL after deployment
-        const scriptUrl = 'YOUR_APPS_SCRIPT_URL_HERE';
+        // IMPORTANT: Replace with your Apps Script URL
+        // Deploy Apps Script and get the URL from: 
+        // Publish > Deploy as web app > Copy the URL
+        const scriptUrl = 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
         
         // Send to Google Apps Script
-        if (scriptUrl && scriptUrl !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+        if (scriptUrl && scriptUrl !== 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
+            console.log('Sending data to Apps Script:', submissionData);
+            
             const response = await fetch(scriptUrl, {
                 method: 'POST',
                 headers: {
@@ -358,21 +373,30 @@ async function submitForm() {
                 body: JSON.stringify(submissionData)
             });
             
+            const result = await response.json();
+            console.log('Apps Script response:', result);
+            
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                throw new Error(result.error || 'Network response was not ok');
             }
+            
+            showSuccess();
         } else {
             // For testing without Apps Script
-            console.log('Form data:', submissionData);
+            console.log('Form data for submission:', submissionData);
+            
+            // Send Telegram notification directly
+            await sendTelegramNotification(submissionData);
+            
             // Simulate API call
             await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            showSuccess();
         }
-        
-        showSuccess();
         
     } catch (error) {
         console.error('Error:', error);
-        showError('Submission error. Please try again later.');
+        showError('Submission error. Please try again later. Error: ' + error.message);
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
@@ -380,12 +404,14 @@ async function submitForm() {
 
 // Get Area from Pincode
 async function getAreaFromPincode(pincode) {
+    if (!pincode || pincode.length !== 6) return 'Invalid Pincode';
+    
     try {
         const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
         const data = await response.json();
         
         if (data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice[0]) {
-            return data[0].PostOffice[0].District || 'Area not found';
+            return data[0].PostOffice[0].District || data[0].PostOffice[0].Name;
         }
     } catch (error) {
         console.error('Error fetching area:', error);
@@ -401,31 +427,48 @@ function showSuccess() {
     if (formContainer) formContainer.style.display = 'none';
     if (successMessage) successMessage.style.display = 'block';
     
-    // Send Telegram notification
-    sendTelegramNotification();
+    updateProgressBar(1);
 }
 
-// Send Telegram Notification
-async function sendTelegramNotification() {
-    const message = `🚀 *New Connection Request*
-    
-👤 *Customer:* ${formData.customerName}
-📞 *Phone:* ${formData.phoneNumber}
-📧 *Email:* ${formData.emailId}
-🆔 *Aadhar:* ${formData.aadharNumber}
-⚡ *Speed:* ${formData.planSpeed}
-📅 *Validity:* ${formData.planValidity}
-📺 *IPTV:* ${formData.iptvApp} - ${formData.iptvCategory}
-📍 *Pincode:* ${formData.pincode}
+// Send Telegram Notification - UPDATED WITH OPERATOR NAME
+async function sendTelegramNotification(submissionData) {
+    const message = `🚀 *NEW CONNECTION REQUEST - S.S. BROADBAND* 🚀
 
-✅ Submitted: ${new Date().toLocaleString()}`;
-    
+👨‍💼 *OPERATOR DETAILS*
+• Operator Name: ${submissionData.operatorName || 'Not Provided'}
+
+👤 *CUSTOMER DETAILS*
+• Customer Name: ${submissionData.customerName || 'Not Provided'}
+• Phone Number: ${submissionData.phoneNumber || 'Not Provided'}
+• Email ID: ${submissionData.emailId || 'Not Provided'}
+• Aadhar Number: ${submissionData.aadharNumber || 'Not Provided'}
+• Date of Birth: ${submissionData.dob || 'Not Provided'}
+
+📍 *ADDRESS DETAILS*
+• Pincode: ${submissionData.pincode || 'Not Provided'}
+• Area: ${submissionData.areaName || 'Not Provided'}
+
+📡 *BROADBAND PLAN*
+• Plan Speed: ${submissionData.planSpeed || 'Not Provided'}
+• Plan Validity: ${submissionData.planValidity || 'Not Provided'}
+
+📺 *IPTV SERVICES*
+• IPTV App: ${submissionData.iptvApp || 'None'}
+${submissionData.iptvApp === 'onyxplay' ? `• Language: ${submissionData.languageSelection || 'Not Selected'}` : ''}
+${submissionData.iptvApp === 'ziggtv' ? `• Package: ${submissionData.iptvPackage || 'Not Selected'}` : ''}
+
+📊 *SYSTEM INFO*
+• Submission Time: ${new Date().toLocaleString('en-IN')}
+• Status: ✅ Form Submitted
+
+_*Har Pal, Har Ghar - S.S. Broadband Services*_`;
+
     const chatIds = ["6582960717", "2028547811", "1492277630"];
     const token = "8428090705:AAGyI-23H2czhusnbZ6nNP324_DdqUU-DRI";
     
     for (const chatId of chatIds) {
         try {
-            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -436,6 +479,11 @@ async function sendTelegramNotification() {
                     parse_mode: 'Markdown'
                 })
             });
+            
+            const result = await response.json();
+            if (!result.ok) {
+                console.error('Telegram API error:', result);
+            }
         } catch (error) {
             console.error('Telegram error:', error);
         }
@@ -457,14 +505,24 @@ function resetForm() {
         planValidity: '',
         iptvApp: '',
         iptvCategory: '',
-        imageUrl: ''
+        imageUrl: '',
+        areaName: ''
     };
     
     // Reset form fields
     const forms = ['step1', 'step2', 'step3', 'step4'];
     forms.forEach(step => {
         const form = document.getElementById(step);
-        if (form) form.reset();
+        if (form) {
+            const inputs = form.querySelectorAll('input');
+            inputs.forEach(input => {
+                if (input.type === 'file') {
+                    input.value = '';
+                } else {
+                    input.value = '';
+                }
+            });
+        }
     });
     
     // Reset selections
@@ -527,3 +585,13 @@ function showError(message) {
         }
     }, 5000);
 }
+
+// Add animation for card selection
+document.querySelectorAll('.plan-card, .iptv-card, .lang-card, .package-card').forEach(card => {
+    card.addEventListener('click', function() {
+        this.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+            this.style.transform = '';
+        }, 200);
+    });
+});
