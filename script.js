@@ -12,7 +12,8 @@ let formData = {
     planValidity: '',
     iptvApp: '',
     iptvCategory: '',
-    imageUrl: ''
+    imageUrl: '',
+    areaName: ''
 };
 
 // Initialize
@@ -215,6 +216,7 @@ function validateStep(step) {
                 showError('Please select package');
                 return false;
             }
+            // Agar "none" select kiya hai to category empty rahegi
             if (formData.iptvApp === 'none') {
                 formData.iptvCategory = '';
             }
@@ -243,7 +245,7 @@ function selectPlan(type, element) {
     }, 300);
 }
 
-// IPTV Selection
+// IPTV Selection - UPDATED WITH NONE OPTION
 function selectIPTVApp(app) {
     const cards = document.querySelectorAll('.iptv-card');
     cards.forEach(card => card.classList.remove('selected'));
@@ -281,7 +283,7 @@ function selectPackage(element) {
     formData.iptvCategory = element.textContent;
 }
 
-// Image Upload - FIXED VERSION
+// Image Upload - FIXED
 function previewImage(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -306,23 +308,18 @@ function previewImage(event) {
             preview.innerHTML = `<img src="${e.target.result}" alt="Aadhar Preview">`;
         }
         formData.aadharPhoto = file;
-        formData.imageUrl = e.target.result; // BASE64 DATA
-        
-        // Debug log
-        console.log('✅ Image loaded successfully');
-        console.log('📏 Image size:', Math.round(e.target.result.length / 1024) + ' KB');
-        console.log('🖼️ Image starts with:', e.target.result.substring(0, 50) + '...');
+        formData.imageUrl = e.target.result;
     };
     
     reader.onerror = function(error) {
-        console.error('❌ Error reading file:', error);
+        console.error('Error reading file:', error);
         showError('Error reading image file. Please try again.');
     };
     
     reader.readAsDataURL(file);
 }
 
-// Submit Form - UPDATED VERSION
+// Submit Form - UPDATED WITH FIXED APP SCRIPT URL
 async function submitForm() {
     // Validate all steps
     if (!validateStep(4)) return;
@@ -338,67 +335,68 @@ async function submitForm() {
     try {
         // Get area name from pincode
         const areaName = await getAreaFromPincode(formData.pincode);
+        formData.areaName = areaName;
         
-        // Debug log before sending
-        console.log('📤 PREPARING TO SEND DATA:');
-        console.log('👤 Customer:', formData.customerName);
-        console.log('📞 Phone:', formData.phoneNumber);
-        console.log('🖼️ Image exists:', !!formData.imageUrl);
-        console.log('📏 Image data length:', formData.imageUrl ? formData.imageUrl.length : 0);
-        console.log('🔍 Image is base64?', formData.imageUrl ? formData.imageUrl.startsWith('data:image/') : false);
-        
-        // Prepare data for submission
+        // Prepare data for submission - FIXED FOR TELEGRAM AND SHEETS
         const submissionData = {
-            operatorName: formData.operatorName || '',
-            customerName: formData.customerName || '',
-            phoneNumber: formData.phoneNumber || '',
-            emailId: formData.emailId || '',
-            aadharNumber: formData.aadharNumber || '',
-            dob: formData.dob || '',
-            pincode: formData.pincode || '',
-            planSpeed: formData.planSpeed || '',
-            planValidity: formData.planValidity || '',
-            iptvApp: formData.iptvApp || '',
+            timestamp: new Date().toISOString(),
+            operatorName: formData.operatorName,
+            customerName: formData.customerName,
+            phoneNumber: formData.phoneNumber,
+            emailId: formData.emailId,
+            aadharNumber: formData.aadharNumber,
+            dob: formData.dob,
+            pincode: formData.pincode,
+            planSpeed: formData.planSpeed,
+            planValidity: formData.planValidity,
+            iptvApp: formData.iptvApp,
             iptvPackage: formData.iptvApp === 'ziggtv' ? formData.iptvCategory : '',
             languageSelection: formData.iptvApp === 'onyxplay' ? formData.iptvCategory : '',
-            imageData: formData.imageUrl || ''  // BASE64 IMAGE DATA
+            areaName: areaName,
+            imageData: formData.imageUrl || ''
         };
         
-        console.log('📦 Final data to send:', submissionData);
-        
-        // IMPORTANT: Replace with your Apps Script Web App URL
-        // Deploy Apps Script and paste the URL here
-        const scriptUrl = 'https://script.google.com/macros/s/AKfycbx1i_zwY5RuXDfCzsuRxEBrEQwT4sy93dBz7cPl5S28GfX22DaXiw2UeivwMJsT6uqNpg/exec';
-        
-        if (!scriptUrl || scriptUrl.includes('YOUR_APPS_SCRIPT')) {
-            throw new Error('Please set your Apps Script URL in script.js file');
-        }
-        
-        console.log('🌐 Sending to Apps Script URL:', scriptUrl);
+        // IMPORTANT: Replace with your Apps Script URL
+        // Deploy Apps Script and get the URL from: 
+        // Publish > Deploy as web app > Copy the URL
+        const scriptUrl = 'https://script.google.com/macros/s/AKfycbz1JmyTd9Yi2qld7DHMA86WUly_OpVv4uKu1DJRCRW0zGvgQsMnGINC9fvsKTuXBeMpIA/exec';
         
         // Send to Google Apps Script
-        const response = await fetch(scriptUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(submissionData)
-        });
-        
-        console.log('📡 Response status:', response.status);
-        
-        const result = await response.json();
-        console.log('✅ Server response:', result);
-        
-        if (result.success) {
+        if (scriptUrl && scriptUrl !== 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
+            console.log('Sending data to Apps Script:', submissionData);
+            
+            const response = await fetch(scriptUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(submissionData)
+            });
+            
+            const result = await response.json();
+            console.log('Apps Script response:', result);
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Network response was not ok');
+            }
+            
             showSuccess();
         } else {
-            throw new Error(result.error || 'Submission failed');
+            // For testing without Apps Script
+            console.log('Form data for submission:', submissionData);
+            
+            // Send Telegram notification directly
+            await sendTelegramNotification(submissionData);
+            
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            showSuccess();
         }
         
     } catch (error) {
-        console.error('❌ Submission error:', error);
-        showError('Submission failed: ' + error.message);
+        console.error('Error:', error);
+        showError('Submission error. Please try again later. Error: ' + error.message);
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
@@ -432,6 +430,66 @@ function showSuccess() {
     updateProgressBar(1);
 }
 
+// Send Telegram Notification - UPDATED WITH OPERATOR NAME
+async function sendTelegramNotification(submissionData) {
+    const message = `🚀 *NEW CONNECTION REQUEST - S.S. BROADBAND* 🚀
+
+👨‍💼 *OPERATOR DETAILS*
+• Operator Name: ${submissionData.operatorName || 'Not Provided'}
+
+👤 *CUSTOMER DETAILS*
+• Customer Name: ${submissionData.customerName || 'Not Provided'}
+• Phone Number: ${submissionData.phoneNumber || 'Not Provided'}
+• Email ID: ${submissionData.emailId || 'Not Provided'}
+• Aadhar Number: ${submissionData.aadharNumber || 'Not Provided'}
+• Date of Birth: ${submissionData.dob || 'Not Provided'}
+
+📍 *ADDRESS DETAILS*
+• Pincode: ${submissionData.pincode || 'Not Provided'}
+• Area: ${submissionData.areaName || 'Not Provided'}
+
+📡 *BROADBAND PLAN*
+• Plan Speed: ${submissionData.planSpeed || 'Not Provided'}
+• Plan Validity: ${submissionData.planValidity || 'Not Provided'}
+
+📺 *IPTV SERVICES*
+• IPTV App: ${submissionData.iptvApp || 'None'}
+${submissionData.iptvApp === 'onyxplay' ? `• Language: ${submissionData.languageSelection || 'Not Selected'}` : ''}
+${submissionData.iptvApp === 'ziggtv' ? `• Package: ${submissionData.iptvPackage || 'Not Selected'}` : ''}
+
+📊 *SYSTEM INFO*
+• Submission Time: ${new Date().toLocaleString('en-IN')}
+• Status: ✅ Form Submitted
+
+_*Har Pal, Har Ghar - S.S. Broadband Services*_`;
+
+    const chatIds = ["6582960717", "2028547811", "1492277630"];
+    const token = "8428090705:AAGyI-23H2czhusnbZ6nNP324_DdqUU-DRI";
+    
+    for (const chatId of chatIds) {
+        try {
+            const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message,
+                    parse_mode: 'Markdown'
+                })
+            });
+            
+            const result = await response.json();
+            if (!result.ok) {
+                console.error('Telegram API error:', result);
+            }
+        } catch (error) {
+            console.error('Telegram error:', error);
+        }
+    }
+}
+
 // Reset Form
 function resetForm() {
     formData = {
@@ -447,13 +505,23 @@ function resetForm() {
         planValidity: '',
         iptvApp: '',
         iptvCategory: '',
-        imageUrl: ''
+        imageUrl: '',
+        areaName: ''
     };
     
     // Reset form fields
-    document.querySelectorAll('input').forEach(input => {
-        if (input.type !== 'button' && input.type !== 'submit') {
-            input.value = '';
+    const forms = ['step1', 'step2', 'step3', 'step4'];
+    forms.forEach(step => {
+        const form = document.getElementById(step);
+        if (form) {
+            const inputs = form.querySelectorAll('input');
+            inputs.forEach(input => {
+                if (input.type === 'file') {
+                    input.value = '';
+                } else {
+                    input.value = '';
+                }
+            });
         }
     });
     
@@ -517,3 +585,13 @@ function showError(message) {
         }
     }, 5000);
 }
+
+// Add animation for card selection
+document.querySelectorAll('.plan-card, .iptv-card, .lang-card, .package-card').forEach(card => {
+    card.addEventListener('click', function() {
+        this.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+            this.style.transform = '';
+        }, 200);
+    });
+});
